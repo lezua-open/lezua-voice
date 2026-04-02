@@ -1,0 +1,22 @@
+{
+  "name": "voicetranscribe",
+  "version": "1.0.0",
+  "description": "Press-and-hold voice transcription with real-time waveform",
+  "main": "dist/main/index.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npm run build && electron .",
+    "build": "tsc && node -e \"const fs=require('fs');const p=require('path');fs.mkdirSync('dist/renderer',{recursive:true});['capsule.html','settings.html','overlay.html'].forEach(f=>fs.copyFileSync(p.join('src/renderer',f),p.join('dist/renderer',f)))\"",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.12",
+    "electron": "^33.0.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "ws": "^8.20.0"
+  }
+}

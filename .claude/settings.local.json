@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(cd:*)",
+      "Bash(rm -rf node_modules)",
+      "Bash(taskkill //F //IM electron.exe)",
+      "Bash(git config:*)",
+      "Bash(gh auth:*)",
+      "Bash(curl -s -X POST https://api.github.com/user/repos -H 'Authorization: token [TOKEN]' -H 'Content-Type: application/json' -d '{\"name\":\"lezua-voice\",\"private\":false}')",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(rm -rf .git)",
+      "Bash(git init:*)"
+    ]
+  }
+}

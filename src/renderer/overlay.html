@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // This overlay window captures keyboard events to detect keyup
+    // It's transparent and ignores mouse events but captures keyboard
+
+    let isCapturing = false;
+
+    // Parse hotkey string to get expected keys
+    function parseHotkey(hotkeyStr) {
+      const keys = hotkeyStr.toLowerCase().split('+').map(k => k.trim());
+      return {
+        ctrl: keys.includes('ctrl'),
+        shift: keys.includes('shift'),
+        alt: keys.includes('alt'),
+        key: keys.find(k => !['ctrl', 'shift', 'alt'].includes(k)) || 'v'
+      };
+    }
+
+    async function loadSettings() {
+      try {
+        return await window.electronAPI.getSettings();
+      } catch {
+        return { hotkey: 'Ctrl+Shift+V' };
+      }
+    }
+
+    let expectedHotkey = null;
+
+    // Keydown - start recording if hotkey pressed
+    document.addEventListener('keydown', async (e) => {
+      if (!expectedHotkey) {
+        const settings = await loadSettings();
+        expectedHotkey = parseHotkey(settings.hotkey);
+      }
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+      const alt = e.altKey;
+      const key = e.key.toLowerCase();
+
+      if (ctrl === expectedHotkey.ctrl &&
+          shift === expectedHotkey.shift &&
+          alt === expectedHotkey.alt &&
+          key === expectedHotkey.key) {
+        if (!isCapturing) {
+          isCapturing = true;
+          window.electronAPI.recordingStarted();
+        }
+      }
+    });
+
+    // Keyup - stop recording if same hotkey released
+    document.addEventListener('keyup', async (e) => {
+      if (!expectedHotkey) return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      const shift = e.shiftKey;
+      const alt = e.altKey;
+      const key = e.key.toLowerCase();
+
+      if (ctrl === expectedHotkey.ctrl &&
+          shift === expectedHotkey.shift &&
+          alt === expectedHotkey.alt &&
+          key === expectedHotkey.key) {
+        if (isCapturing) {
+          isCapturing = false;
+          window.electronAPI.recordingStopped();
+        }
+      }
+    });
+
+    // Blur - stop recording if window loses focus
+    window.addEventListener('blur', () => {
+      if (isCapturing) {
+        isCapturing = false;
+        window.electronAPI.recordingStopped();
+      }
+    });
+
+    // Prevent default for all keys to avoid interference
+    document.addEventListener('keydown', (e) => {
+      e.preventDefault();
+    }, { capture: true });
+
+    document.addEventListener('keyup', (e) => {
+      e.preventDefault();
+    }, { capture: true });
+  </script>
+</body>
+</html>
