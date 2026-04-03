@@ -12,6 +12,7 @@ import {
   ToggleCard,
 } from '../shared/ui/form-controls';
 import { cn } from '../shared/utils/cn';
+import logoUrl from '../../assets/images/logo.png';
 
 export function SettingsApp() {
   const { settings, updateSetting, saveSettings, resetSettings } = useSettingsDraft();
@@ -21,7 +22,9 @@ export function SettingsApp() {
     <div className="settings-shell">
       <header className="window-bar">
         <div className="window-bar__title">
-          <div className="window-bar__badge" />
+          <div className="window-bar__logo-shell">
+            <img className="window-bar__logo" src={logoUrl} alt="VoiceTranscribe logo" />
+          </div>
           <div>
             <div className="window-bar__heading">VoiceTranscribe 设置</div>
             <div className="window-bar__subheading">短语音输入与实时转写控制面板</div>

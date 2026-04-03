@@ -12,6 +12,7 @@ import {
   Section,
   ToggleCard,
 } from '../shared/ui/form-controls';
+import logoUrl from '../../assets/images/logo.png';
 
 export function QuickPanelApp() {
   const { settings, updateSetting, saveSettings } = useSettingsDraft();
@@ -54,8 +55,15 @@ export function QuickPanelApp() {
     <div className="quick-panel">
       <header className="quick-panel__header">
         <div>
-          <div className="quick-panel__eyebrow">托盘快速设置</div>
-          <div className="quick-panel__title">VoiceTranscribe</div>
+          <div className="quick-panel__brand">
+            <div className="quick-panel__logo-shell">
+              <img className="quick-panel__logo" src={logoUrl} alt="VoiceTranscribe logo" />
+            </div>
+            <div>
+              <div className="quick-panel__eyebrow">托盘快速设置</div>
+              <div className="quick-panel__title">VoiceTranscribe</div>
+            </div>
+          </div>
           <div className="quick-panel__subtitle">
             高频配置放在这里，详细参数仍在完整设置页中维护。
           </div>

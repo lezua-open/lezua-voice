@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron';
+import { getAppLogoPath } from '../utils/app-logo';
 
 type Params = {
   currentWindow: BrowserWindow | null;
@@ -18,6 +19,7 @@ export function ensureSettingsWindow(params: Params) {
   const window = new BrowserWindow({
     width: 620,
     height: 860,
+    icon: getAppLogoPath(),
     show: false,
     resizable: false,
     frame: false,

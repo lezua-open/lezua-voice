@@ -1,4 +1,5 @@
 import { BrowserWindow, Rectangle, screen } from 'electron';
+import { getAppLogoPath } from '../utils/app-logo';
 
 type Params = {
   currentWindow: BrowserWindow | null;
@@ -43,6 +44,7 @@ export function ensureQuickPanelWindow(params: Params) {
     height,
     x: position.x,
     y: position.y,
+    icon: getAppLogoPath(),
     show: false,
     frame: false,
     transparent: false,
