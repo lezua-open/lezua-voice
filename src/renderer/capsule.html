@@ -7,47 +7,200 @@
   <title>Voice Capsule</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; }
-    body { display: flex; align-items: center; justify-content: center; padding: 8px; }
-    .capsule {
-      min-width: 240px; max-width: 560px; height: 56px; padding: 0 18px; border-radius: 28px;
-      background: rgba(30, 34, 44, 0.86); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
-      border: 1px solid rgba(255, 255, 255, 0.10); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
-      display: flex; align-items: center; gap: 14px; color: #f8fafc; transform: scale(0.96); opacity: 0;
-      transition: transform 220ms ease, opacity 220ms ease;
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
     }
-    .capsule.visible { opacity: 1; transform: scale(1); }
-    .waveform { width: 44px; height: 32px; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; }
-    .wave-bar { width: 6px; min-height: 4px; border-radius: 999px; background: linear-gradient(180deg, #67e8f9, #22d3ee); box-shadow: 0 0 10px rgba(34, 211, 238, 0.25); transition: height 70ms linear; }
-    .text-wrap { min-width: 160px; max-width: 460px; display: flex; flex-direction: column; justify-content: center; gap: 2px; overflow: hidden; }
-    .title { font-size: 13px; line-height: 1.2; color: rgba(255, 255, 255, 0.70); }
-    .content { font-size: 14px; line-height: 1.3; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .error { color: #fca5a5; }
-    .success { color: #86efac; }
+    body {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 14px;
+    }
+    .shell {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .capsule {
+      width: 260px;
+      min-height: 64px;
+      max-width: 640px;
+      padding: 14px 18px;
+      border-radius: 32px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03)),
+        rgba(22, 28, 37, 0.82);
+      backdrop-filter: blur(28px) saturate(1.05);
+      -webkit-backdrop-filter: blur(28px) saturate(1.05);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow:
+        0 20px 45px rgba(0,0,0,0.22),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: #f8fafc;
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+      transition:
+        opacity 220ms ease,
+        transform 220ms ease,
+        width 250ms ease;
+      pointer-events: auto;
+    }
+    .capsule.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .capsule.state-recording {
+      border-color: rgba(103, 232, 249, 0.22);
+    }
+    .capsule.state-processing,
+    .capsule.state-refining {
+      border-color: rgba(148, 163, 184, 0.18);
+    }
+    .capsule.state-success {
+      border-color: rgba(134, 239, 172, 0.22);
+    }
+    .capsule.state-error {
+      border-color: rgba(252, 165, 165, 0.22);
+    }
+    .visual {
+      width: 44px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 0 0 auto;
+    }
+    .wave-bar {
+      width: 6px;
+      min-height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #7dd3fc, #22d3ee);
+      box-shadow: 0 0 14px rgba(34, 211, 238, 0.18);
+      transition: height 72ms linear, opacity 140ms ease;
+    }
+    .text-wrap {
+      min-width: 160px;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.82);
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.9;
+    }
+    .status-hint {
+      font-size: 12px;
+      color: rgba(226, 232, 240, 0.58);
+      white-space: nowrap;
+    }
+    .transcript {
+      font-size: 15px;
+      line-height: 1.42;
+      font-weight: 600;
+      color: #f8fafc;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .transcript.subtle {
+      color: rgba(248, 250, 252, 0.78);
+      font-weight: 500;
+    }
+    .capsule.state-success .transcript {
+      color: #bbf7d0;
+    }
+    .capsule.state-error .transcript {
+      color: #fecaca;
+    }
+    .measurer {
+      position: absolute;
+      visibility: hidden;
+      pointer-events: none;
+      white-space: nowrap;
+      font-size: 15px;
+      line-height: 1.42;
+      font-weight: 600;
+      max-width: 520px;
+    }
   </style>
 </head>
 <body>
-  <div class="capsule" id="capsule">
-    <div class="waveform" id="waveform"></div>
-    <div class="text-wrap">
-      <div class="title" id="title">就绪</div>
-      <div class="content" id="content">按一次快捷键开始，再按一次结束</div>
+  <div class="shell">
+    <div class="capsule state-idle" id="capsule">
+      <div class="visual" id="visual"></div>
+      <div class="text-wrap">
+        <div class="meta-row">
+          <div class="badge" id="badge">
+            <span class="badge-dot"></span>
+            <span id="badge-text">Ready</span>
+          </div>
+          <div class="status-hint" id="status-hint">按一次开始，再按一次结束</div>
+        </div>
+        <div class="transcript subtle" id="transcript">准备就绪</div>
+      </div>
     </div>
   </div>
+  <span class="measurer" id="measurer"></span>
 
   <script>
-    const State = { IDLE: 'idle', RECORDING: 'recording', PROCESSING: 'processing', REFINING: 'refining', SUCCESS: 'success', ERROR: 'error' };
+    const State = {
+      IDLE: 'idle',
+      RECORDING: 'recording',
+      PROCESSING: 'processing',
+      REFINING: 'refining',
+      SUCCESS: 'success',
+      ERROR: 'error',
+    };
+
     const BAR_WEIGHTS = [0.5, 0.8, 1.0, 0.75, 0.55];
     const ATTACK = 0.4;
     const RELEASE = 0.15;
     const MIN_BAR = 4;
     const MAX_BAR = 32;
     const TARGET_SAMPLE_RATE = 16000;
+    const MIN_WIDTH = 260;
+    const MAX_WIDTH = 640;
 
     const capsule = document.getElementById('capsule');
-    const waveform = document.getElementById('waveform');
-    const titleEl = document.getElementById('title');
-    const contentEl = document.getElementById('content');
+    const visual = document.getElementById('visual');
+    const badge = document.getElementById('badge');
+    const badgeText = document.getElementById('badge-text');
+    const statusHint = document.getElementById('status-hint');
+    const transcriptEl = document.getElementById('transcript');
+    const measurer = document.getElementById('measurer');
 
     const bars = [];
     let currentState = State.IDLE;
@@ -59,18 +212,18 @@
     let sourceNode = null;
     let muteGain = null;
     let waveformFrame = null;
-    let pcmChunks = [];
     let smoothedLevel = 0;
     let savedClipboard = '';
     let isInjecting = false;
+    let lastLiveTranscript = '';
 
     function createBars() {
-      waveform.innerHTML = '';
+      visual.innerHTML = '';
       BAR_WEIGHTS.forEach(() => {
         const bar = document.createElement('div');
         bar.className = 'wave-bar';
         bar.style.height = `${MIN_BAR}px`;
-        waveform.appendChild(bar);
+        visual.appendChild(bar);
         bars.push(bar);
       });
     }
@@ -84,33 +237,78 @@
       setTimeout(() => window.electronAPI.hideCapsule(), 220);
     }
 
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function updateCapsuleWidth(text) {
+      measurer.textContent = text || '准备就绪';
+      const measured = measurer.getBoundingClientRect().width;
+      const targetWidth = clamp(Math.ceil(measured) + 130, MIN_WIDTH, MAX_WIDTH);
+      capsule.style.width = `${targetWidth}px`;
+    }
+
+    function updateTranscript(text, subtle = false) {
+      transcriptEl.textContent = text;
+      transcriptEl.classList.toggle('subtle', subtle);
+      updateCapsuleWidth(text);
+    }
+
+    function setStateClass(state) {
+      capsule.classList.remove(
+        'state-idle',
+        'state-recording',
+        'state-processing',
+        'state-refining',
+        'state-success',
+        'state-error',
+      );
+      capsule.classList.add(`state-${state}`);
+    }
+
     function setState(state, text = '') {
       currentState = state;
-      titleEl.className = 'title';
-      contentEl.className = 'content';
+      setStateClass(state);
 
       if (state === State.IDLE) {
-        titleEl.textContent = '就绪';
-        contentEl.textContent = text || '按一次快捷键开始，再按一次结束';
+        badgeText.textContent = 'Ready';
+        statusHint.textContent = '按一次开始，再按一次结束';
+        updateTranscript(text || '准备就绪', true);
         resetBars();
       } else if (state === State.RECORDING) {
-        titleEl.textContent = '录音中';
-        contentEl.textContent = text || '正在录音...';
+        badgeText.textContent = 'Listening';
+        statusHint.textContent = '正在实时转录';
+        updateTranscript(text || lastLiveTranscript || '请开始说话', !text);
       } else if (state === State.PROCESSING) {
-        titleEl.textContent = '转写中';
-        contentEl.textContent = text || '正在把语音转换成文字...';
+        badgeText.textContent = 'Transcribing';
+        statusHint.textContent = '等待最终结果';
+        updateTranscript(text || lastLiveTranscript || '正在整理识别内容...', false);
       } else if (state === State.REFINING) {
-        titleEl.textContent = '纠错中';
-        contentEl.textContent = text || '正在做保守纠错...';
+        badgeText.textContent = 'Refining';
+        statusHint.textContent = '正在做保守纠错';
+        updateTranscript(text || lastLiveTranscript || '正在优化文本...', false);
       } else if (state === State.SUCCESS) {
-        titleEl.textContent = '完成';
-        contentEl.classList.add('success');
-        contentEl.textContent = text || '文本已复制到剪贴板';
+        badgeText.textContent = 'Done';
+        statusHint.textContent = '已复制并尝试粘贴';
+        updateTranscript(text || '已完成', false);
       } else if (state === State.ERROR) {
-        titleEl.textContent = '错误';
-        contentEl.classList.add('error');
-        contentEl.textContent = text || '发生错误';
+        badgeText.textContent = 'Error';
+        statusHint.textContent = '请查看错误信息';
+        updateTranscript(text || '发生错误', false);
         resetBars();
+      }
+    }
+
+    function setLiveTranscript(text, isFinal) {
+      if (!text) return;
+      lastLiveTranscript = text;
+
+      if (currentState === State.RECORDING) {
+        statusHint.textContent = isFinal ? '已得到一句完整文本' : '正在实时转录';
+        updateTranscript(text, false);
+      } else if (currentState === State.PROCESSING) {
+        statusHint.textContent = '等待最终结果';
+        updateTranscript(text, false);
       }
     }
 
@@ -123,21 +321,10 @@
     function floatTo16BitPCM(float32Array) {
       const output = new Int16Array(float32Array.length);
       for (let i = 0; i < float32Array.length; i += 1) {
-        const s = Math.max(-1, Math.min(1, float32Array[i]));
-        output[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+        const sample = Math.max(-1, Math.min(1, float32Array[i]));
+        output[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
       }
       return output;
-    }
-
-    function mergeFloat32Arrays(chunks) {
-      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-      const result = new Float32Array(totalLength);
-      let offset = 0;
-      chunks.forEach((chunk) => {
-        result.set(chunk, offset);
-        offset += chunk.length;
-      });
-      return result;
     }
 
     function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
@@ -149,6 +336,7 @@
       const result = new Float32Array(newLength);
       let offsetResult = 0;
       let offsetBuffer = 0;
+
       while (offsetResult < result.length) {
         const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
         let accum = 0;
@@ -161,6 +349,7 @@
         offsetResult += 1;
         offsetBuffer = nextOffsetBuffer;
       }
+
       return result;
     }
 
@@ -169,7 +358,6 @@
     }
 
     async function startAudioCapture(deviceId) {
-      pcmChunks = [];
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: deviceId && deviceId !== 'default' ? { deviceId: { exact: deviceId } } : true,
       });
@@ -187,7 +375,10 @@
 
       processor.onaudioprocess = (event) => {
         const input = event.inputBuffer.getChannelData(0);
-        pcmChunks.push(new Float32Array(input));
+        const copied = new Float32Array(input);
+        const downsampled = downsampleBuffer(copied, audioContext.sampleRate, TARGET_SAMPLE_RATE);
+        const pcmChunk = encodePcm(downsampled);
+        window.electronAPI.dashScopeAudioChunk(pcmChunk);
       };
 
       sourceNode.connect(analyser);
@@ -219,7 +410,7 @@
         BAR_WEIGHTS.forEach((weight, index) => {
           const jitter = 1 + ((Math.random() * 0.08) - 0.04);
           const height = MIN_BAR + (MAX_BAR - MIN_BAR) * smoothedLevel * weight * jitter;
-          bars[index].style.height = `${Math.max(MIN_BAR, Math.min(MAX_BAR, height))}px`;
+          bars[index].style.height = `${clamp(height, MIN_BAR, MAX_BAR)}px`;
         });
 
         waveformFrame = requestAnimationFrame(draw);
@@ -247,13 +438,11 @@
         sourceNode.disconnect();
         sourceNode = null;
       }
-
       if (mediaStream) {
         mediaStream.getTracks().forEach((track) => track.stop());
         mediaStream = null;
       }
 
-      const inputSampleRate = audioContext ? audioContext.sampleRate : TARGET_SAMPLE_RATE;
       if (audioContext) {
         await audioContext.close();
         audioContext = null;
@@ -261,10 +450,6 @@
 
       analyser = null;
       analyserData = null;
-
-      const merged = mergeFloat32Arrays(pcmChunks);
-      const downsampled = downsampleBuffer(merged, inputSampleRate, TARGET_SAMPLE_RATE);
-      return encodePcm(downsampled);
     }
 
     async function saveClipboard() {
@@ -276,7 +461,7 @@
     }
 
     async function injectText(text) {
-      if (isInjecting) return;
+      if (isInjecting) return false;
       isInjecting = true;
       let pasted = false;
       try {
@@ -285,7 +470,9 @@
         pasted = await window.electronAPI.simulatePaste();
       } finally {
         setTimeout(async () => {
-          try { await restoreClipboard(); } catch (error) {
+          try {
+            await restoreClipboard();
+          } catch (error) {
             console.error('Failed to restore clipboard:', error);
           }
           isInjecting = false;
@@ -299,7 +486,7 @@
         return text;
       }
 
-      setState(State.REFINING, '正在做保守纠错...');
+      setState(State.REFINING, lastLiveTranscript || text || '正在优化文本...');
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
 
@@ -339,24 +526,29 @@
     }
 
     async function processRecording() {
-      setState(State.PROCESSING, '正在把语音转换成文字...');
+      setState(State.PROCESSING, lastLiveTranscript || '正在把语音转换成文字...');
       const settings = await window.electronAPI.getSettings();
-      const pcmBuffer = await stopAudioCapture();
+      await stopAudioCapture();
 
       try {
-        const rawTranscript = await window.electronAPI.transcribeGummy(pcmBuffer);
+        const rawTranscript = await window.electronAPI.dashScopeFinish();
         if (!rawTranscript) {
           throw new Error('未识别到语音内容');
         }
+
         const finalTranscript = await refineTranscript(rawTranscript, settings);
         const pasted = await injectText(finalTranscript);
-        setState(State.SUCCESS, pasted ? finalTranscript : `${finalTranscript}（已复制，可手动 Ctrl+V 粘贴）`);
+        setState(
+          State.SUCCESS,
+          pasted ? finalTranscript : `${finalTranscript}（已复制，可手动 Ctrl+V 粘贴）`,
+        );
       } catch (error) {
         console.error('Transcription failed:', error);
         setState(State.ERROR, error?.message || '转写失败');
       }
 
       setTimeout(() => {
+        lastLiveTranscript = '';
         setState(State.IDLE);
         hideCapsule();
       }, 3200);
@@ -365,10 +557,12 @@
     async function beginRecording() {
       showCapsule();
       smoothedLevel = 0;
-      setState(State.RECORDING, '正在录音...');
+      lastLiveTranscript = '';
+      setState(State.RECORDING, '请开始说话');
 
       try {
         const settings = await window.electronAPI.getSettings();
+        await window.electronAPI.dashScopeStart();
         await startAudioCapture(settings.audioDeviceId);
       } catch (error) {
         console.error('Recording start failed:', error);
@@ -376,15 +570,29 @@
       }
     }
 
-    window.electronAPI.onCapsuleState(async (state) => {
+    window.electronAPI.onCapsuleState(async (state, data) => {
       if (state === 'recording') {
         await beginRecording();
-      } else if (state === 'stop' && currentState === State.RECORDING) {
+        return;
+      }
+
+      if (state === 'stop' && currentState === State.RECORDING) {
         await processRecording();
-      } else if (state === 'idle') {
+        return;
+      }
+
+      if (state === 'live-transcript') {
+        setLiveTranscript(data?.text || '', Boolean(data?.isFinal));
+        return;
+      }
+
+      if (state === 'idle') {
         setState(State.IDLE);
-      } else if (state === 'error') {
-        setState(State.ERROR, '发生错误');
+        return;
+      }
+
+      if (state === 'error') {
+        setState(State.ERROR, data?.message || '发生错误');
       }
     });
 

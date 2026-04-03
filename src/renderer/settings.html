@@ -7,106 +7,326 @@
   <title>VoiceTranscribe 设置</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; background: #0f1117; color: #f8fafc; min-height: 100vh; padding: 24px; }
-    .container { max-width: 460px; margin: 0 auto; }
-    h1 { font-size: 22px; margin-bottom: 20px; font-weight: 600; }
-    .section { background: rgba(27, 32, 42, 0.96); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 10px 24px rgba(0,0,0,0.16); }
-    .section-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 14px; font-weight: 600; }
-    .form-group { margin-bottom: 14px; }
-    .form-group:last-child { margin-bottom: 0; }
-    label { display: block; margin-bottom: 6px; font-size: 14px; color: #cbd5e1; }
-    input[type="text"], input[type="password"], select { width: 100%; border-radius: 10px; border: 1px solid #334155; background: #111827; color: #f8fafc; padding: 10px 12px; font-size: 14px; }
-    input:focus, select:focus { outline: none; border-color: #60a5fa; }
-    .hint { margin-top: 6px; font-size: 12px; color: #64748b; line-height: 1.4; }
-    .checkbox-row { display: flex; align-items: center; gap: 10px; }
-    .checkbox-row input { width: 18px; height: 18px; accent-color: #60a5fa; }
-    .btn-row { display: flex; gap: 10px; margin-top: 18px; }
-    button { border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; cursor: pointer; }
-    .primary { flex: 1; background: #2563eb; color: white; }
-    .secondary { background: #334155; color: #e2e8f0; }
-    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 14px; border-radius: 10px; background: #111827; color: #f8fafc; border: 1px solid rgba(255,255,255,0.08); display: none; }
-    .toast.show { display: block; }
+    :root {
+      --bg: #0f1117;
+      --panel: rgba(23, 29, 39, 0.96);
+      --panel-border: rgba(255,255,255,0.08);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --subtle: #64748b;
+      --input: #111827;
+      --input-border: #334155;
+      --input-focus: #60a5fa;
+      --primary: #2563eb;
+      --primary-hover: #3b82f6;
+      --secondary: #334155;
+      --shadow: 0 18px 40px rgba(0,0,0,0.18);
+    }
+    html, body {
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(37,99,235,0.14), transparent 30%),
+        radial-gradient(circle at top right, rgba(34,211,238,0.10), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    }
+    body {
+      padding: 28px;
+    }
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .hero {
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .hero-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .section-note {
+      color: var(--subtle);
+      font-size: 12px;
+      text-align: right;
+    }
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+    .grid.two {
+      grid-template-columns: 1fr 1fr;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: 14px;
+      color: #dbe3ee;
+    }
+    .field small {
+      color: var(--subtle);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--input-border);
+      background: rgba(17, 24, 39, 0.98);
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 14px;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.14);
+      background: #131b2a;
+    }
+    input[readonly] {
+      color: #dbeafe;
+      cursor: default;
+    }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 46px;
+    }
+    .switch-row input {
+      width: 18px;
+      height: 18px;
+      accent-color: #60a5fa;
+    }
+    .switch-row span {
+      font-size: 14px;
+      color: #dbe3ee;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(96,165,250,0.12);
+      color: #bfdbfe;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, opacity 140ms ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+    }
+    .primary {
+      flex: 1;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
+    .primary:hover {
+      background: var(--primary-hover);
+    }
+    .secondary {
+      background: var(--secondary);
+      color: #e2e8f0;
+    }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.98);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 16px 30px rgba(0,0,0,0.22);
+      display: none;
+    }
+    .toast.show {
+      display: block;
+    }
+    .llm-disabled {
+      opacity: 0.56;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>VoiceTranscribe 设置</h1>
-
-    <div class="section">
-      <div class="section-title">常规</div>
-      <div class="form-group">
-        <label for="hotkey">快捷键</label>
-        <input type="text" id="hotkey" value="Ctrl+Shift+V" readonly>
-        <div class="hint">当前版本使用切换模式：按一次开始录音，再按一次结束录音。</div>
-      </div>
-      <div class="form-group">
-        <label for="language">识别语言</label>
-        <select id="language">
-          <option value="zh-CN">中文（简体）</option>
-          <option value="zh-TW">中文（繁体）</option>
-          <option value="en-US">English</option>
-          <option value="ja-JP">日本語</option>
-          <option value="ko-KR">한국어</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="audioDevice">音频设备</label>
-        <select id="audioDevice">
-          <option value="default">默认设备</option>
-        </select>
-        <div class="hint" id="audio-hint">正在加载麦克风设备...</div>
+    <div class="hero">
+      <div class="hero-title">VoiceTranscribe 设置</div>
+      <div class="hero-subtitle">
+        这是一套面向短语音输入的桌面配置页。按一次开始录音，再按一次结束。录音过程中会实时显示转写文本，停止后自动尝试将最终结果粘贴到当前焦点输入框。
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">阿里云转写</div>
-      <div class="form-group">
-        <label for="transcriptionApiUrl">转写接口地址</label>
-        <input type="text" id="transcriptionApiUrl" placeholder="wss://dashscope.aliyuncs.com/api-ws/v1/inference">
-      </div>
-      <div class="form-group">
-        <label for="transcriptionModel">转写模型</label>
-        <input type="text" id="transcriptionModel" placeholder="gummy-chat-v1">
-      </div>
-      <div class="form-group">
-        <label for="transcriptionApiKey">阿里云 API Key</label>
-        <input type="password" id="transcriptionApiKey" placeholder="你的百炼 DashScope API Key">
-      </div>
-      <div class="hint">这里只填阿里云百炼的 DashScope API Key，不要填 OpenAI 的 key。</div>
+    <div class="stack">
+      <section class="section">
+        <div class="section-header">
+          <div class="section-title">常规</div>
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span>实时转写已启用</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label for="hotkey">快捷键</label>
+            <input type="text" id="hotkey" value="Ctrl+Shift+V" readonly>
+            <small>当前版本使用切换模式：按一次开始录音，再按一次结束录音。</small>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label for="language">识别语言</label>
+              <select id="language">
+                <option value="zh-CN">中文（简体）</option>
+                <option value="zh-TW">中文（繁体）</option>
+                <option value="en-US">English</option>
+                <option value="ja-JP">日本語</option>
+                <option value="ko-KR">한국어</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="audioDevice">音频设备</label>
+              <select id="audioDevice">
+                <option value="default">默认设备</option>
+              </select>
+              <small id="audio-hint">正在加载麦克风设备...</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <div class="section-title">阿里云转写</div>
+          <div class="section-note">基础识别链路</div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label for="transcriptionApiUrl">WebSocket 接口地址</label>
+            <input type="text" id="transcriptionApiUrl" placeholder="wss://dashscope.aliyuncs.com/api-ws/v1/inference">
+            <small>默认使用阿里云百炼实时句子级接口。</small>
+          </div>
+          <div class="grid two">
+            <div class="field">
+              <label for="transcriptionModel">转写模型</label>
+              <input type="text" id="transcriptionModel" placeholder="gummy-chat-v1">
+            </div>
+            <div class="field">
+              <label for="transcriptionApiKey">阿里云 API Key</label>
+              <input type="password" id="transcriptionApiKey" placeholder="你的 DashScope API Key">
+            </div>
+          </div>
+          <div class="field">
+            <small>这里只填阿里云百炼 DashScope API Key，不要和 LLM 纠错用的 key 混用。</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="llm-section">
+        <div class="section-header">
+          <div class="section-title">LLM 纠错</div>
+          <div class="section-note">可选增强</div>
+        </div>
+        <div class="grid">
+          <label class="switch-row">
+            <input type="checkbox" id="llmEnabled">
+            <span>启用保守纠错，只修明显识别错误</span>
+          </label>
+          <div class="grid two">
+            <div class="field">
+              <label for="llmApiUrl">纠错接口地址</label>
+              <input type="text" id="llmApiUrl" placeholder="https://api.openai.com/v1/chat/completions">
+            </div>
+            <div class="field">
+              <label for="llmModel">纠错模型</label>
+              <input type="text" id="llmModel" placeholder="gpt-4o-mini">
+            </div>
+          </div>
+          <div class="field">
+            <label for="llmApiKey">纠错 API Key</label>
+            <input type="password" id="llmApiKey" placeholder="可选：OpenAI 或其他兼容服务 key">
+            <small>如果不需要后处理，这一组可以全部留空。</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <div class="section-title">系统</div>
+          <div class="section-note">应用行为</div>
+        </div>
+        <div class="grid">
+          <label class="switch-row">
+            <input type="checkbox" id="startWithSystem">
+            <span>开机启动</span>
+          </label>
+        </div>
+      </section>
     </div>
 
-    <div class="section">
-      <div class="section-title">LLM 纠错</div>
-      <div class="form-group checkbox-row">
-        <input type="checkbox" id="llmEnabled">
-        <label for="llmEnabled">启用保守纠错</label>
-      </div>
-      <div class="form-group">
-        <label for="llmApiUrl">纠错接口地址</label>
-        <input type="text" id="llmApiUrl" placeholder="https://api.openai.com/v1/chat/completions">
-      </div>
-      <div class="form-group">
-        <label for="llmModel">纠错模型</label>
-        <input type="text" id="llmModel" placeholder="gpt-4o-mini">
-      </div>
-      <div class="form-group">
-        <label for="llmApiKey">纠错 API Key</label>
-        <input type="password" id="llmApiKey" placeholder="可选：OpenAI 或其他兼容服务 key">
-      </div>
-      <div class="hint">如果暂时不需要纠错，可以不填这一组。</div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">系统</div>
-      <div class="form-group checkbox-row">
-        <input type="checkbox" id="startWithSystem">
-        <label for="startWithSystem">开机启动</label>
-      </div>
-    </div>
-
-    <div class="btn-row">
+    <div class="footer">
       <button class="secondary" id="resetBtn">重置</button>
-      <button class="primary" id="saveBtn">保存</button>
+      <button class="primary" id="saveBtn">保存设置</button>
     </div>
   </div>
 
@@ -128,11 +348,16 @@
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
     const toast = document.getElementById('toast');
+    const llmSection = document.getElementById('llm-section');
 
     function showToast(message) {
       toast.textContent = message;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function syncLlmSection() {
+      llmSection.classList.toggle('llm-disabled', !llmEnabledCheckbox.checked);
     }
 
     async function loadSettings() {
@@ -147,6 +372,7 @@
       llmModelInput.value = settings.llmModel || 'gpt-4o-mini';
       llmApiKeyInput.value = settings.llmApiKey || '';
       startWithSystemCheckbox.checked = Boolean(settings.startWithSystem);
+      syncLlmSection();
     }
 
     async function loadAudioDevices() {
@@ -154,16 +380,19 @@
         const devices = await navigator.mediaDevices.enumerateDevices();
         const inputs = devices.filter((device) => device.kind === 'audioinput');
         audioDeviceSelect.innerHTML = '<option value="default">默认设备</option>';
+
         if (!inputs.length) {
           audioHint.textContent = '未检测到麦克风';
           return;
         }
+
         inputs.forEach((device, index) => {
           const option = document.createElement('option');
           option.value = device.deviceId;
           option.textContent = device.label || `麦克风 ${index + 1}`;
           audioDeviceSelect.appendChild(option);
         });
+
         audioHint.textContent = `已检测到 ${inputs.length} 个麦克风设备`;
       } catch (error) {
         console.error('Failed to enumerate devices:', error);
@@ -200,9 +429,11 @@
       llmApiKeyInput.value = '';
       startWithSystemCheckbox.checked = false;
       audioDeviceSelect.value = 'default';
+      syncLlmSection();
       showToast('已恢复默认设置');
     }
 
+    llmEnabledCheckbox.addEventListener('change', syncLlmSection);
     saveBtn.addEventListener('click', saveSettings);
     resetBtn.addEventListener('click', resetSettings);
 

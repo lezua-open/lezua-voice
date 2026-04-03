@@ -18,6 +18,23 @@ interface Settings {
   startWithSystem: boolean;
 }
 
+interface DashScopeSession {
+  ws: WebSocket;
+  taskId: string;
+  transcript: string;
+  started: boolean;
+  settled: boolean;
+  finishRequested: boolean;
+  finishSent: boolean;
+  pendingChunks: Buffer[];
+  startPromise: Promise<void>;
+  finishPromise: Promise<string>;
+  resolveStart: () => void;
+  rejectStart: (error: Error) => void;
+  resolveFinish: (text: string) => void;
+  rejectFinish: (error: Error) => void;
+}
+
 const defaultSettings: Settings = {
   hotkey: 'Ctrl+Shift+V',
   language: 'zh-CN',
@@ -40,6 +57,7 @@ let mainWindow: BrowserWindow | null = null;
 let capsuleWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isRecording = false;
+let dashScopeSession: DashScopeSession | null = null;
 
 const isDev = !app.isPackaged;
 const htmlPath = (name: string) =>
@@ -58,6 +76,10 @@ function saveSettings(settings: Settings): void {
   store.set('settings', { ...defaultSettings, ...settings });
 }
 
+function sendCapsuleState(state: string, data?: unknown): void {
+  capsuleWindow?.webContents.send('capsule-state', state, data);
+}
+
 function createMainWindow(): void {
   if (mainWindow) {
     mainWindow.show();
@@ -66,11 +88,12 @@ function createMainWindow(): void {
   }
 
   mainWindow = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: 620,
+    height: 860,
     show: false,
     resizable: false,
     title: 'VoiceTranscribe 设置',
+    backgroundColor: '#0f1117',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -95,14 +118,14 @@ function createCapsuleWindow(): void {
   if (capsuleWindow) return;
 
   const display = screen.getPrimaryDisplay();
-  const width = 360;
-  const height = 88;
+  const width = 760;
+  const height = 160;
 
   capsuleWindow = new BrowserWindow({
     width,
     height,
-    x: Math.round((display.workArea.width - width) / 2),
-    y: display.workArea.y + display.workArea.height - 132,
+    x: Math.round(display.workArea.x + (display.workArea.width - width) / 2),
+    y: display.workArea.y + display.workArea.height - 176,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -110,6 +133,7 @@ function createCapsuleWindow(): void {
     show: false,
     resizable: false,
     focusable: false,
+    hasShadow: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -170,7 +194,7 @@ function startRecording(): void {
   isRecording = true;
   rebuildTrayMenu();
   showCapsule();
-  capsuleWindow?.webContents.send('capsule-state', 'recording');
+  sendCapsuleState('recording');
   mainWindow?.webContents.send('recording-state', 'recording');
 }
 
@@ -178,7 +202,7 @@ function stopRecording(): void {
   if (!isRecording) return;
   isRecording = false;
   rebuildTrayMenu();
-  capsuleWindow?.webContents.send('capsule-state', 'stop');
+  sendCapsuleState('stop');
   mainWindow?.webContents.send('recording-state', 'idle');
 }
 
@@ -199,6 +223,211 @@ function registerHotkey(): void {
   }
 }
 
+function destroyDashScopeSession() {
+  if (!dashScopeSession) return;
+  try { dashScopeSession.ws.close(); } catch {}
+  dashScopeSession = null;
+}
+
+function flushPendingAudio(session: DashScopeSession) {
+  while (session.pendingChunks.length > 0 && session.started && !session.finishSent) {
+    const chunk = session.pendingChunks.shift();
+    if (chunk) {
+      session.ws.send(chunk, { binary: true });
+    }
+  }
+
+  if (session.finishRequested && !session.finishSent && session.started) {
+    session.finishSent = true;
+    session.ws.send(JSON.stringify({
+      header: {
+        action: 'finish-task',
+        task_id: session.taskId,
+        streaming: 'duplex',
+      },
+      payload: {
+        input: {},
+      },
+    }));
+  }
+}
+
+async function startDashScopeSession(settings: Settings): Promise<void> {
+  const transcriptionApiKey = (settings.transcriptionApiKey || '').trim();
+  if (!settings.transcriptionApiUrl || !transcriptionApiKey) {
+    throw new Error('缺少百炼接口地址或阿里云 API Key');
+  }
+
+  if (dashScopeSession) {
+    destroyDashScopeSession();
+  }
+
+  const taskId = crypto.randomUUID();
+  let resolveStart: () => void = () => {};
+  let rejectStart: (error: Error) => void = () => {};
+  let resolveFinish: (text: string) => void = () => {};
+  let rejectFinish: (error: Error) => void = () => {};
+
+  const startPromise = new Promise<void>((resolve, reject) => {
+    resolveStart = resolve;
+    rejectStart = reject;
+  });
+  const finishPromise = new Promise<string>((resolve, reject) => {
+    resolveFinish = resolve;
+    rejectFinish = reject;
+  });
+
+  const ws = new WebSocket(settings.transcriptionApiUrl, {
+    headers: {
+      Authorization: `Bearer ${transcriptionApiKey}`,
+    },
+  });
+
+  const session: DashScopeSession = {
+    ws,
+    taskId,
+    transcript: '',
+    started: false,
+    settled: false,
+    finishRequested: false,
+    finishSent: false,
+    pendingChunks: [],
+    startPromise,
+    finishPromise,
+    resolveStart,
+    rejectStart,
+    resolveFinish,
+    rejectFinish,
+  };
+
+  dashScopeSession = session;
+
+  const fail = (error: Error) => {
+    if (session.settled) return;
+    session.settled = true;
+    session.rejectStart(error);
+    session.rejectFinish(error);
+    destroyDashScopeSession();
+  };
+
+  const succeed = (text: string) => {
+    if (session.settled) return;
+    session.settled = true;
+    session.resolveFinish(text);
+    destroyDashScopeSession();
+  };
+
+  ws.on('open', () => {
+    ws.send(JSON.stringify({
+      header: {
+        action: 'run-task',
+        task_id: taskId,
+        streaming: 'duplex',
+      },
+      payload: {
+        task_group: 'audio',
+        task: 'asr',
+        function: 'recognition',
+        model: settings.transcriptionModel || 'gummy-chat-v1',
+        parameters: {
+          format: 'pcm',
+          sample_rate: 16000,
+          transcription_enabled: true,
+          translation_enabled: false,
+        },
+        input: {},
+      },
+    }));
+  });
+
+  ws.on('message', (raw: WebSocket.RawData) => {
+    const rawText = typeof raw === 'string' ? raw : raw.toString();
+    console.log('[DashScope WS]', rawText);
+
+    try {
+      const message = JSON.parse(rawText);
+      const event = message.header?.event;
+
+      if (event === 'task-started') {
+        session.started = true;
+        session.resolveStart();
+        flushPendingAudio(session);
+        return;
+      }
+
+      if (event === 'result-generated') {
+        const output = message.payload?.output;
+        const transcription = output?.transcription;
+        const text = output?.text
+          || output?.sentence_text
+          || output?.sentence?.text
+          || output?.transcript
+          || (typeof transcription === 'string' ? transcription : transcription?.text)
+          || '';
+
+        if (typeof text === 'string' && text) {
+          session.transcript = text;
+          sendCapsuleState('live-transcript', {
+            text,
+            isFinal: Boolean(transcription?.sentence_end),
+          });
+        }
+        return;
+      }
+
+      if (event === 'task-finished') {
+        succeed((session.transcript || '').trim());
+        return;
+      }
+
+      if (event === 'task-failed') {
+        const errorMessage = message.header?.error_message
+          || message.payload?.message
+          || '百炼转写失败';
+        fail(new Error(errorMessage));
+      }
+    } catch (error) {
+      fail(error instanceof Error ? error : new Error('百炼响应解析失败'));
+    }
+  });
+
+  ws.on('error', (error) => {
+    fail(error instanceof Error ? error : new Error('百炼连接失败'));
+  });
+
+  ws.on('close', (code, reason) => {
+    if (session.settled) return;
+    if (session.finishRequested && session.transcript) {
+      succeed((session.transcript || '').trim());
+      return;
+    }
+    fail(new Error(`百炼连接已关闭，close=${code} reason=${reason.toString()}`));
+  });
+
+  await session.startPromise;
+}
+
+function pushDashScopeAudioChunk(audioChunk: Buffer) {
+  if (!dashScopeSession || dashScopeSession.settled) return;
+
+  if (!dashScopeSession.started || dashScopeSession.finishRequested) {
+    dashScopeSession.pendingChunks.push(audioChunk);
+    return;
+  }
+
+  dashScopeSession.ws.send(audioChunk, { binary: true });
+}
+
+async function finishDashScopeSession(): Promise<string> {
+  if (!dashScopeSession) {
+    throw new Error('当前没有进行中的百炼会话');
+  }
+
+  dashScopeSession.finishRequested = true;
+  flushPendingAudio(dashScopeSession);
+  return await dashScopeSession.finishPromise;
+}
+
 function setupIpcHandlers(): void {
   ipcMain.handle('get-settings', () => getSettings());
   ipcMain.handle('save-settings', (_, settings: Settings) => {
@@ -207,150 +436,28 @@ function setupIpcHandlers(): void {
     return true;
   });
   ipcMain.handle('is-recording', () => isRecording);
+
   ipcMain.on('recording-started', () => startRecording());
   ipcMain.on('recording-stopped', () => stopRecording());
   ipcMain.on('hide-capsule', () => hideCapsule());
   ipcMain.on('show-main-window', () => createMainWindow());
+
   ipcMain.handle('clipboard-save', () => clipboard.readText());
   ipcMain.handle('clipboard-restore', (_, text: string) => clipboard.writeText(text));
   ipcMain.handle('clipboard-write', (_, text: string) => clipboard.writeText(text));
-  ipcMain.handle('transcribe-gummy', async (_, audioBuffer: ArrayBuffer) => {
+
+  ipcMain.handle('dashscope-start', async () => {
     const settings = getSettings();
-    const transcriptionApiKey = (settings.transcriptionApiKey || '').trim();
-    if (!settings.transcriptionApiUrl || !transcriptionApiKey) {
-      throw new Error('缺少百炼接口地址或 API Key');
-    }
-
-    const audio = Buffer.from(new Uint8Array(audioBuffer));
-    const taskId = crypto.randomUUID();
-    const chunkSize = 3200; // 16kHz * 2 bytes * 0.1s
-    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    return await new Promise<string>((resolve, reject) => {
-      const ws = new WebSocket(settings.transcriptionApiUrl, {
-        headers: {
-          Authorization: `Bearer ${transcriptionApiKey}`,
-        },
-      });
-
-      let transcript = '';
-      let audioSent = false;
-      let settled = false;
-
-      const fail = (error: Error) => {
-        if (settled) return;
-        settled = true;
-        try { ws.close(); } catch {}
-        reject(error);
-      };
-
-      const succeed = (text: string) => {
-        if (settled) return;
-        settled = true;
-        try { ws.close(); } catch {}
-        resolve(text);
-      };
-
-      const sendAudioChunks = async () => {
-        for (let offset = 0; offset < audio.length; offset += chunkSize) {
-          const chunk = audio.subarray(offset, Math.min(offset + chunkSize, audio.length));
-          ws.send(chunk, { binary: true });
-          await wait(100);
-        }
-
-        ws.send(JSON.stringify({
-          header: { action: 'finish-task', task_id: taskId, streaming: 'duplex' },
-          payload: { input: {} },
-        }));
-      };
-
-      ws.on('open', () => {
-        ws.send(JSON.stringify({
-          header: { action: 'run-task', task_id: taskId, streaming: 'duplex' },
-          payload: {
-            task_group: 'audio',
-            task: 'asr',
-            function: 'recognition',
-            model: settings.transcriptionModel || 'gummy-chat-v1',
-            parameters: {
-              sample_rate: 16000,
-              format: 'pcm',
-              source_language: null,
-              transcription_enabled: true,
-              translation_enabled: false,
-            },
-            input: {},
-          },
-        }));
-      });
-
-      ws.on('message', (raw: WebSocket.RawData) => {
-        const textRaw = typeof raw === 'string' ? raw : raw.toString();
-        console.log('[DashScope WS]', textRaw);
-
-        try {
-          const message = JSON.parse(textRaw);
-          const event = message.header?.event;
-
-          if (event === 'task-started' && !audioSent) {
-            audioSent = true;
-            void sendAudioChunks().catch((error) => {
-              fail(error instanceof Error ? error : new Error('音频发送失败'));
-            });
-            return;
-          }
-
-          if (event === 'result-generated') {
-            const transcription = message.payload?.output?.transcription;
-            const text = message.payload?.output?.text
-              || message.payload?.output?.sentence_text
-              || message.payload?.output?.sentence?.text
-              || message.payload?.output?.transcript
-              || (typeof transcription === 'string' ? transcription : transcription?.text)
-              || '';
-            if (typeof text === 'string' && text) {
-              transcript = text;
-            }
-            return;
-          }
-
-          if (event === 'task-finished') {
-            succeed((transcript || '').trim());
-            return;
-          }
-
-          if (event === 'task-failed') {
-            const errorMessage = message.header?.error_message
-              || message.payload?.message
-              || '百炼转写失败';
-            fail(new Error(errorMessage));
-            return;
-          }
-
-          if (event === 'task-status') {
-            const outputText = message.payload?.output?.text;
-            if (outputText) {
-              transcript = outputText;
-            }
-          }
-        } catch (error) {
-          fail(error instanceof Error ? error : new Error('百炼响应解析失败'));
-        }
-      });
-
-      ws.on('error', (error: Error) => {
-        fail(error instanceof Error ? error : new Error('百炼连接失败'));
-      });
-
-      ws.on('close', (code, reason) => {
-        if (!settled && !transcript) {
-          fail(new Error(`百炼连接已关闭，未收到转写结果。close=${code} reason=${reason.toString()}`));
-        } else if (!settled) {
-          succeed((transcript || '').trim());
-        }
-      });
-    });
+    await startDashScopeSession(settings);
+    return true;
   });
+  ipcMain.on('dashscope-audio-chunk', (_, audioChunk: ArrayBuffer) => {
+    pushDashScopeAudioChunk(Buffer.from(new Uint8Array(audioChunk)));
+  });
+  ipcMain.handle('dashscope-finish', async () => {
+    return await finishDashScopeSession();
+  });
+
   ipcMain.handle('simulate-paste', async () => {
     return new Promise<boolean>((resolve) => {
       execFile(
@@ -377,15 +484,17 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // tray app
+  // 保持托盘常驻
 });
 
 app.on('before-quit', () => {
   globalShortcut.unregisterAll();
+  destroyDashScopeSession();
 });
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  destroyDashScopeSession();
 });
 
 export { getSettings, saveSettings };
