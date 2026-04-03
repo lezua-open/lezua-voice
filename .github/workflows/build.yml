@@ -25,9 +25,9 @@ jobs:
         run: npm run dist
 
       - name: Upload to Release
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
           files: release/**/*.exe
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
